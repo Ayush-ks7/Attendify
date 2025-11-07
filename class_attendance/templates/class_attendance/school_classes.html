@@ -1,0 +1,308 @@
+{% extends "class_attendance/layout.html" %}
+{% block content %}
+
+<div class="container text-center">
+  <div class="d-flex justify-content-between mt-3">
+    <h1 class="text-center">School Classes: {{ course.label }}</h1>
+    <div>
+      <button
+        onclick="window.location.href='{% url 'class_attendance:school-classes-create' course.id %}'"
+        type="button"
+        class="btn btn-success"
+      >
+        Create School Class
+      </button>
+    </div>
+  </div>
+
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item">
+        <a href="{% url 'class_attendance:universities' %}"
+          >{{ university.label }}</a
+        >
+      </li>
+      <li class="breadcrumb-item">
+        <a href="{% url 'class_attendance:courses' university.id %}"
+          >Courses</a
+        >
+      </li>
+      <li class="breadcrumb-item active" aria-current="page">School Classes</li>
+    </ol>
+  </nav>
+
+  {% if school_classes.count == 0 %}
+  <div class="alert alert-primary mt-2" role="alert">
+    <h4 class="alert-heading">Welcome to Attendify!</h4>
+    <p>
+      You don't have any school classes yet. Click on the button above to create
+      one.
+    </p>
+    <button
+      onclick="window.location.href='{% url 'class_attendance:school-classes-create' course.id %}'"
+      type="button"
+      class="btn btn-success"
+    >
+      Create School Class
+    </button>
+  </div>
+  {% endif %}
+
+  <table class="table mt-3 table-striped table-hover">
+    <div class="d-flex justify-content-between">
+        <input
+              id="searchInput"
+              class="form-control me-2 w-25"
+              type="search"
+              placeholder="Search"
+              name="search"
+              aria-label="Search"
+            />
+
+      <div>
+        {% if filter_professor %}
+        <button
+          onclick="window.location.href='{% url 'class_attendance:school-classes' course.id %}?filter_professor=false{% if show_archived %}&show_archived=true{% endif %}'"
+          type="button"
+          class="btn btn-outline-secondary"
+        >
+          Show All Classes
+        </button>
+      {% else %}
+        <button
+          onclick="window.location.href='{% url 'class_attendance:school-classes' course.id %}?filter_professor=true{% if show_archived %}&show_archived=true{% endif %}'"
+          type="button"
+          class="btn btn-outline-secondary"
+        >
+          Show Only My Classes
+        </button>
+      {% endif %}
+      
+      {% if show_archived %}
+        <button
+          onclick="window.location.href='{% url 'class_attendance:school-classes' course.id %}?filter_professor={{ filter_professor|yesno:'true,false' }}'"
+          type="button"
+          class="btn btn-outline-info"
+        >
+          Hide Archived Classes
+        </button>
+      {% else %}
+        <button
+          onclick="window.location.href='{% url 'class_attendance:school-classes' course.id %}?filter_professor={{ filter_professor|yesno:'true,false' }}&show_archived=true'"
+          type="button"
+          class="btn btn-outline-warning"
+        >
+          Show Archived Classes
+        </button>
+      {% endif %}
+      
+      <button
+      onclick="window.location.href='{% url 'class_attendance:download-report-course' course.id %}'"
+      type="button"
+      class="btn btn-outline-primary"
+    >
+    <i class="bi bi-download"></i>
+      Download Report
+    </button>
+
+      </div>
+    </div>
+    <thead>
+      <tr>
+        <th scope="col" class="text-start">Start and End Time</th>
+        <th scope="col" class="text-center">Class ID</th>
+        <th scope="col" class="text-center">Professor</th>
+        <th scope="col" class="text-center">Year and Semester</th>
+        <th scope="col" class="text-center">Sessions</th>
+        <th scope="col" class="text-end">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for school_class in school_classes %}
+
+      <tr
+        role="button"
+        class="table-row"
+        onclick="window.location.href='{% url 'class_attendance:sessions' course.id school_class.id %}'"
+        data-weekday="{{ school_class.get_weekday_display }}"
+        data-start-time="{{ school_class.start_time|time:'H:i' }}"
+        data-end-time="{{ school_class.end_time|time:'H:i' }}"
+      >
+        
+        <td class="text-start">
+            <span class="class-time-display">
+                {{ school_class.get_weekday_display }} ({{ school_class.start_time|time:"H:i" }} - {{ school_class.end_time|time:"H:i" }})
+            </span>
+            <span class="badge bg-success class-today-badge" style="display: none;">Today</span>
+            <span class="badge bg-warning class-now-badge" style="display: none;">Now</span>
+            {% if school_class.is_archived %}
+            <span class="badge bg-secondary">Archived</span>
+            {% endif %}
+        </td>
+
+        {% if school_class.class_id %}
+        <td class="text-center">{{ school_class.class_id }}</td>
+        {% else %}
+        <td class="text-center">N/A</td>
+        {% endif %}
+
+        <td class="text-start">
+          {{ school_class.professor }}
+           {% if school_class.professor.id == user.id %}
+          <span class="badge bg-primary">You</span>
+          {% endif %}
+        </td>
+       
+        <td class="text-center">{{ school_class.year }} ({{ school_class.semester }})</td>
+        <td class="text-center">{{ school_class.sessions.count }}</td>
+        <td class="text-end">
+          <button
+            type="button"
+            class="btn btn-outline-secondary m-1"
+            onclick="event.stopPropagation(); window.location.href='{% url 'class_attendance:school-classes-update' course.id school_class.id %}'"
+            data-bs-toggle="tooltip"
+            data-bs-title="Edit School Class"
+          >
+            <i class="bi bi-pencil-square"></i>
+            <span>Edit</span>
+          </button>
+          
+          {% if school_class.is_archived %}
+          <button
+            type="button"
+            class="btn btn-outline-success m-1"
+            onclick="event.stopPropagation(); window.location.href='{% url 'class_attendance:school-classes-archive' course.id school_class.id %}'"
+            data-bs-toggle="tooltip"
+            data-bs-title="Unarchive School Class"
+          >
+            <i class="bi bi-archive"></i>
+            <span>Unarchive</span>
+          </button>
+          {% else %}
+          <button
+            type="button"
+            class="btn btn-outline-warning m-1"
+            onclick="event.stopPropagation(); window.location.href='{% url 'class_attendance:school-classes-archive' course.id school_class.id %}'"
+            data-bs-toggle="tooltip"
+            data-bs-title="Archive School Class"
+          >
+            <i class="bi bi-archive"></i>
+            <span>Archive</span>
+          </button>
+          {% endif %}
+          
+          <button
+            type="button"
+            class="btn btn-outline-secondary m-1"
+            onclick="event.stopPropagation(); window.open('{% url 'class_attendance:download-report-school-class' course.id school_class.id %}', '_blank')"
+            data-bs-toggle="tooltip"
+            data-bs-title="Download Report"
+          >
+            <i class="bi bi-download"></i>
+            <span>Report</span>
+          </button>
+
+          <button
+            onclick="event.stopPropagation(); window.location.href='{% url 'class_attendance:sessions' course.id school_class.id %}'"
+            data-bs-toggle="tooltip"
+            data-bs-title="Sessions"
+            type="button"
+            class="btn btn-primary m-1"
+          >
+            <i class="bi bi-info-circle"></i>
+            <span>Sessions</span>
+          </button>
+        </td>
+      </tr>
+
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+  const tooltipTriggerList = document.querySelectorAll(
+    '[data-bs-toggle="tooltip"]'
+  );
+  const tooltipList = [...tooltipTriggerList].map(
+    (tooltipTriggerEl) => new bootstrap.Tooltip(tooltipTriggerEl)
+  );
+
+  const searchInput = document.getElementById("searchInput");
+  let timeout = null;
+  searchInput.addEventListener("input", function() {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => {
+      const filterProf = new URLSearchParams(window.location.search).get('filter_professor') || 'true';
+      const showArchived = new URLSearchParams(window.location.search).get('show_archived') || 'false';
+      const searchValue = encodeURIComponent(searchInput.value);
+      const searchUrl = `{% url 'class_attendance:school-classes' course.id %}?search=${searchValue}&filter_professor=${filterProf}&show_archived=${showArchived}`;
+      
+      fetch(searchUrl)
+        .then(response => response.text())
+        .then(html => {
+          // i dont like this... mabye create an REST API endpoint for this
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, 'text/html');
+          const newTbody = doc.querySelector("tbody");
+          const oldTbody = document.querySelector("tbody");
+          if(newTbody !== null && oldTbody !== null){
+            oldTbody.innerHTML = newTbody.innerHTML;
+            // IMPORTANT: Re-run the client-side time logic after search updates the table
+            updateAllClassStatuses();
+          }
+        });
+    }, 500);
+  });
+
+  document.addEventListener('DOMContentLoaded', function() {
+      updateAllClassStatuses();      
+      setInterval(updateAllClassStatuses, 60 * 1000); 
+  });
+
+  function updateAllClassStatuses() {
+      const schoolClassRows = document.querySelectorAll('tr[data-weekday]'); // Select all table rows with school class data
+      const now = new Date(); // Current date and time in the browser's local timezone
+      const currentWeekday = now.toLocaleString('en-US', { weekday: 'long' }); // e.g., "Friday"
+     
+      schoolClassRows.forEach(row => {
+          const classWeekday = row.dataset.weekday;
+          const classStartTimeStr = row.dataset.startTime;  
+          const classEndTimeStr = row.dataset.endTime;
+
+          const timeDisplaySpan = row.querySelector('.class-time-display');
+          const todayBadge = row.querySelector('.class-today-badge');
+          const nowBadge = row.querySelector('.class-now-badge');
+
+          const isToday = (classWeekday === currentWeekday);
+          let isNow = false;
+
+          if (isToday) {
+              const [startHour, startMinute] = classStartTimeStr.split(':').map(Number);
+              const [endHour, endMinute] = classEndTimeStr.split(':').map(Number);
+
+              const classStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), startHour, startMinute, 0);
+              const classEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), endHour, endMinute, 0);
+
+              isNow = (now >= classStart && now <= classEnd);
+          }
+
+          if (isToday) {
+              todayBadge.style.display = 'inline';
+          } else {
+              todayBadge.style.display = 'none';
+          }
+
+          if (isNow) {
+              nowBadge.style.display = 'inline';
+              timeDisplaySpan.classList.add('text-success');
+          } else {
+              nowBadge.style.display = 'none';
+              timeDisplaySpan.classList.remove('text-success');
+          }
+      });
+  }
+
+</script>
+
+{% endblock content %}
